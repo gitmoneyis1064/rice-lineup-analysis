@@ -1,0 +1,174 @@
+import csv
+import datetime
+from os import chdir, listdir
+
+path = '/Users/Fleder/Dropbox/Rice Academics/Rice Basketball/2016-17/Play by Play'
+chdir(path)
+
+
+def format_lineup(set_lineup):
+    string_lineup = ""
+    for player in set_lineup:
+        string_lineup = string_lineup + player + " "
+    return string_lineup[:-1]
+
+def convert_csv(file_name):
+    stints = []
+    count = 0
+    with open(file_name, 'rb') as csv_file:
+        reader = csv.reader(csv_file)
+        for row in reader:
+            stint = {}
+            if count != 0:
+                stint['lineup'] = set(row[0].split())
+                minutes = row[1].strip().split(':')
+                minutes = datetime.timedelta(0, int(minutes[1]), minutes=int(minutes[0]))
+                stint['min'] = minutes
+                stint['pts'] = int(row[2].strip())
+                stint['opts'] = int(row[3].strip())
+                stint['pt diff'] = int(row[4].strip())
+                stint['reb. diff'] = int(row[5].strip())
+                stint['fgm'] = int(row[6].strip())
+                stint['fga'] = int(row[7].strip())
+                stint['3pm'] = int(row[8].strip())
+                stint['3pa'] = int(row[9].strip())
+                stint['ofgm'] = int(row[10].strip())
+                stint['ofga'] = int(row[11].strip())
+                stint['o3gm'] = int(row[12].strip())
+                stint['o3ga'] = int(row[13].strip())
+                stint['ast'] = int(row[14].strip())
+                stint['d reb'] = int(row[15].strip())
+                stint['o reb'] = int(row[16].strip())
+                stint['total reb'] = int(row[17].strip())
+                stint['opp d reb'] = int(row[18].strip())
+                stint['opp o reb'] = int(row[19].strip())
+                stint['opp total reb'] = int(row[20].strip())
+                stint['fg%'] = int(row[21].strip())
+                stint['3p%'] = int(row[22].strip())
+                stint['efg%'] = int(row[23].strip())
+                stint['bk'] = int(row[24].strip())
+                stint['stl'] = int(row[25].strip())
+                stint['fouls committed'] = int(row[26].strip())
+                stint['fouls drawn'] = int(row[27].strip())
+                stint['dreb%'] = int(row[28].strip())
+                stint['oreb%'] = int(row[29].strip())
+                stint['opp fg%'] = int(row[30].strip())
+                stint['opp 3p%'] = int(row[31].strip())
+                stint['opp efg%'] = int(row[32].strip())
+                stint['opp blk'] = int(row[33].strip())
+                stints.append(stint)
+            else:
+                count += 1
+        return stints
+
+
+def aggregate():
+    file_names = listdir(path)
+    all_stints = []
+    aggregated_stints = []
+    existing_lineups = []
+    for file_name in file_names:
+        stints = convert_csv(file_name)
+        all_stints.extend(stints)
+    for stint in all_stints:
+        lineup = stint['lineup']
+        if lineup not in existing_lineups:
+            existing_lineups.append(lineup)
+            aggregated_stints.append(stint)
+        else:
+            for astint in aggregated_stints:
+                if astint['lineup'] == lineup:
+                    astint['min'] += stint['min']
+                    astint['pts'] += stint['pts']
+                    astint['opts'] += stint['opts']
+                    astint['pt diff'] += stint['pt diff']
+                    astint['reb diff'] += stint['reb. diff']
+                    astint['fgm'] += stint['fgm']
+                    astint['fga'] += stint['fga']
+                    astint['3pm'] += stint['3pm']
+                    astint['3pa'] += stint['3pa']
+                    astint['ofgm'] += stint['ofgm']
+                    astint['ofga'] += stint['ofga']
+                    astint['o3gm'] += stint['o3gm']
+                    astint['o3ga'] += stint['o3ga']
+                    astint['ast'] += stint['ast']
+                    astint['d reb'] += stint['d reb']
+                    astint['o reb'] += stint['o reb']
+                    astint['total reb'] += stint['total reb']
+                    astint['opp d reb'] += stint['opp d reb']
+                    astint['opp total reb'] += stint['opp o reb']
+                    astint['opp total reb'] += stint['opp total reb']
+                    astint['fg%'] += (float(astint['fgm']) /  astint['fga'])
+                    astint['3p%'] += (float(astint['3pm']) /  astint['3pa'])
+                    astint['efg%'] += (float(astint['fgm'] + (0.5 * astint['3pm'])) /  astint['3pa'])
+                    astint['bk'] += stint['bk']
+                    astint['stl'] += stint['stl']
+                    astint['fouls committed'] += stint['fouls committed']
+                    astint['fouls drawn'] += stint['fouls drawn']
+                    astint['dreb%'] += float(astint['d reb']) / (astint['opp o reb'] + astint['d reb'])
+                    astint['oreb%'] += float(astint['o reb']) / (astint['opp d reb'] + astint['o reb'])
+                    astint['opp fg%'] += (float(astint['ofgm']) /  astint['ofga'])
+                    astint['opp 3p%'] += (float(astint['o3gm']) /  astint['o3ga'])
+                    astint['opp efg%'] += (float(astint['ofgm'] + (0.5 * astint['o3gm'])) /  astint['ofga'])
+                    astint['opp blk'] += stint['opp blk']
+    for stint in aggregated_stints:
+        stint['lineup'] = format_lineup(sorted(list(stint['lineup'])))
+        stint['min'] = format_time(str(stint['min']))
+    return aggregated_stints
+
+def format_time(time):
+    result = 0.0
+    time = time.split(':')
+    result = float(time[0]) * 60 + float(time[1]) + float(time[2]) / 60
+    return round(result, 1)
+
+def csvify(stints):
+    csv_rows = [
+        ["Lineup", "Min", "Pts", "Oppo. Pts", "Diff.", "REB Diff.", "FGM", "FGA", "3PM", "3PA", "Opp. FGM", "Opp. FGA",
+         "Opp. 3PM", "Opp. 3PA", "AST", "D-Reb", "O-Reb", "REB", "Opp. D-Reb", "Opp. O-Reb", "Opp. REB", "FGP", "3P%",
+         "eFG%", "BK", "STL", "TO", "Fouls Committed", "Fouls Drawn", "DREB%", "OREB%", "Opp. FG%", "Opp. 3P%",
+         "Opp. eFG%", "Opp. BLK"]]
+    for stint in stints:
+        csv_row = [stint["lineup"], stint["lasting time"], stint["points scored"], stint["points allowed"],
+                   stint["point diff."], stint["rebound diff."],
+                   stint["field goal made"], stint["field goal attempt"], stint["three point made"],
+                   stint["three point attempt"], stint["made shots against"], stint["shots against"],
+                   stint["made threes against"], stint["threes against"],
+                   stint["assist"], stint["defensive rebound"], stint["offensive rebound"],
+                   stint["total rebound"], stint["d-rebounds allowed"], stint["o-rebounds allowed"],
+                   stint["total rebound against"], stint["fgp"], stint["3pointper"], stint["efgp"], stint["block"],
+                   stint["steal"],
+                   stint["turnover"], stint["foul"], stint["fouls drawn"], stint["DREB%"], stint["OREB%"],
+                   stint["fgpAgainst"], stint["3pointperAgainst"], stint["efgpAgainst"], stint["opponent block"]]
+        csv_rows.append(csv_row)
+    for row in csv_rows:
+        str_row = ""
+        for element in row:
+            str_row = str_row + str(element) + ", "
+        print(str_row)
+
+#def normalize(stints, desired_minutes):
+    to_remove = []
+    for stint in stints:
+        minutes = stint['min']
+        if minutes != 0:
+            ratio = float(desired_minutes) / minutes
+            stint['pts'] = round(stint['pts'] * ratio, 1)
+            stint['opts'] = round(stint['opts'] * ratio, 1)
+            stint['diff'] = round(stint['diff'] * ratio, 1)
+            stint['fgm'] = round(stint['fgm'] * ratio, 1)
+            stint['fga'] = round(stint['fga'] * ratio, 1)
+            stint['ast'] = round(stint['ast'] * ratio, 1)
+            stint['dreb'] = round(stint['dreb'] * ratio, 1)
+            stint['oreb'] = round(stint['oreb'] * ratio, 1)
+            stint['treb'] = round(stint['treb'] * ratio, 1)
+        else:
+            to_remove.append(stint)
+    for element in to_remove:
+        stints.remove(element)
+    return stints
+
+def run():
+    stints = aggregate()
+    #stints = normalize(stints, 20)
+    csvify(stints)
